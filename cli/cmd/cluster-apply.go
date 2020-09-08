@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -59,11 +60,18 @@ func runClusterApply(cmd *cobra.Command, args []string) {
 		"args":    args,
 	})
 
-	ex, p, lokoConfig, assetDir := initialize(ctxLogger)
+	cc, c, ex := initialize(ctxLogger)
+
+	assetDir, err := homedir.Expand(c.AssetDir())
+	if err != nil {
+		ctxLogger.Fatalf("Error expanding path: %v", err)
+	}
 
 	exists := clusterExists(ctxLogger, ex)
 	if exists && !confirm {
 		// TODO: We could plan to a file and use it when installing.
+		// TODO: How does this play with a complex execution plan? Does a single "global" plan
+		// operation represent what's going to be applied?
 		if err := ex.Plan(); err != nil {
 			ctxLogger.Fatalf("Failed to reconcile cluster state: %v", err)
 		}
@@ -75,18 +83,29 @@ func runClusterApply(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	if err := p.Apply(ex); err != nil {
-		ctxLogger.Fatalf("error applying cluster: %v", err)
+	for _, step := range c.TerraformExecutionPlan() {
+		if step.PreExecutionHook != nil {
+			ctxLogger.Printf("Running pre-execution hook for step %q", step.Description)
+
+			if err := step.PreExecutionHook(ex); err != nil {
+				ctxLogger.Fatalf("Pre-execution hook for step %q failed: %v", step.Description, err)
+			}
+		}
+
+		err := ex.Execute(step)
+		if err != nil {
+			ctxLogger.Fatalf("Execution of step %q failed: %v", step.Description, err)
+		}
 	}
 
 	fmt.Printf("\nYour configurations are stored in %s\n", assetDir)
 
-	kubeconfig, err := getKubeconfig(ctxLogger, lokoConfig, true)
+	kubeconfig, err := getKubeconfig(ctxLogger, cc, true)
 	if err != nil {
 		ctxLogger.Fatalf("Failed to get kubeconfig: %v", err)
 	}
 
-	if err := verifyCluster(kubeconfig, p.Meta().ExpectedNodes); err != nil {
+	if err := verifyCluster(kubeconfig, c.Nodes()); err != nil {
 		ctxLogger.Fatalf("Verify cluster: %v", err)
 	}
 
@@ -97,7 +116,7 @@ func runClusterApply(cmd *cobra.Command, args []string) {
 	}
 
 	// Do controlplane upgrades only if cluster already exists and it is not a managed platform.
-	if exists && !p.Meta().Managed {
+	if exists && !c.Managed() {
 		fmt.Printf("\nEnsuring that cluster controlplane is up to date.\n")
 
 		cu := controlplaneUpdater{
@@ -121,25 +140,26 @@ func runClusterApply(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	if ph, ok := p.(platform.PlatformWithPostApplyHook); ok {
-		if err := ph.PostApplyHook(kubeconfig); err != nil {
-			ctxLogger.Fatalf("Running platform post install hook failed: %v", err)
-		}
-	}
+	// TODO: Fix.
+	// if ph, ok := p.(platform.PlatformWithPostApplyHook); ok {
+	// 	if err := ph.PostApplyHook(kubeconfig); err != nil {
+	// 		ctxLogger.Fatalf("Running platform post install hook failed: %v", err)
+	// 	}
+	// }
 
 	if skipComponents {
 		return
 	}
 
 	componentsToApply := []string{}
-	for _, component := range lokoConfig.RootConfig.Components {
+	for _, component := range cc.RootConfig.Components {
 		componentsToApply = append(componentsToApply, component.Name)
 	}
 
 	ctxLogger.Println("Applying component configuration")
 
 	if len(componentsToApply) > 0 {
-		if err := applyComponents(lokoConfig, kubeconfig, componentsToApply...); err != nil {
+		if err := applyComponents(cc, kubeconfig, componentsToApply...); err != nil {
 			ctxLogger.Fatalf("Applying component configuration failed: %v", err)
 		}
 	}
