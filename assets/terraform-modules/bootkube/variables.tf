@@ -173,3 +173,9 @@ variable "enable_tls_bootstrap" {
   description = "Enable TLS Bootstrap for Kubelet."
   type        = bool
 }
+
+variable "failsafe_inbound_host_ports" {
+  description = "UDP/TCP/SCTP protocol/port pairs that Felix will allow incoming traffic to host endpoints on irrespective of the security policy."
+  type        = list(any)
+  default     = null
+}
