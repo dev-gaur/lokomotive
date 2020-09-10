@@ -107,7 +107,7 @@ func NewConfig() *config {
 	return &config{
 		Region:             "eu-central-1",
 		EnableAggregation:  true,
-		EnableTLSBootstrap: true,
+		EnableTLSBootstrap: false,
 	}
 }
 

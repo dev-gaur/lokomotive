@@ -120,7 +120,7 @@ func (c *config) LoadConfig(configBody *hcl.Body, evalContext *hcl.EvalContext) 
 func NewConfig() *config {
 	return &config{
 		EnableAggregation:  true,
-		EnableTLSBootstrap: true,
+		EnableTLSBootstrap: false,
 	}
 }
 

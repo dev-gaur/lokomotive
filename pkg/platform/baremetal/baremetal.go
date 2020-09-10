@@ -87,7 +87,7 @@ func NewConfig() *config {
 		CachedInstall:      "false",
 		OSChannel:          "flatcar-stable",
 		OSVersion:          "current",
-		EnableTLSBootstrap: true,
+		EnableTLSBootstrap: false,
 	}
 }
 
