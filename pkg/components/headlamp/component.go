@@ -31,6 +31,8 @@ const name = "headlamp"
 const chartValuesTmpl = `
 nodeSelector:
   beta.kubernetes.io/os: linux
+image:
+  pullPolicy: Always
 ingress:
   enabled: true
   hosts:
