@@ -179,3 +179,9 @@ variable "failsafe_inbound_host_ports" {
   type        = list(any)
   default     = null
 }
+
+variable "encrypt_pod_traffic" {
+  description = "Enable in-cluster pod traffic."
+  type        = bool
+  default     = false
+}

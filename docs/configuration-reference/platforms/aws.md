@@ -107,6 +107,8 @@ cluster "aws" {
 
   enable_tls_bootstrap = true
 
+  encrypt_pod_traffic = true
+
   disk_size = var.disk_size
 
   disk_type = var.disk_type
@@ -219,10 +221,11 @@ worker_pool "my-worker-pool" {
 | `region`                      | AWS region to use for deploying the cluster.                                                                                                                                               | "eu-central-1"  |    string    |  false   |
 | `enable_aggregation`          | Enable the Kubernetes Aggregation Layer.                                                                                                                                                   |      true       |     bool     |  false   |
 | `enable_tls_bootstrap`        | Enable TLS bootstraping for Kubelet.                                                                                                                                                       |      true       |     bool     |  false   |
+| `encrypt_pod_traffic`         | Enable in-cluster pod traffic. If true you need to reduce the default `network_mtu`, see its documentation.                                                                                |      false      |     bool     |  false   |
 | `disk_size`                   | Size of the EBS volume in GB.                                                                                                                                                              |       40        |    number    |  false   |
 | `disk_type`                   | Type of the EBS volume (e.g. standard, gp2, io1).                                                                                                                                          |      "gp2"      |    string    |  false   |
 | `disk_iops`                   | IOPS of the EBS volume (e.g 100).                                                                                                                                                          |        0        |    number    |  false   |
-| `network_mtu`                 | CNI interface MTU. Use 8981 if using instances types with Jumbo frames.                                                                                                                    |      1480       |    number    |  false   |
+| `network_mtu`                 | CNI interface MTU. Use 1440 if `encrypt_pod_traffic = true`. When using instance types with Jumbo frames, use 8981 (or 8941 if `encrypt_pod_traffic = true`).                              |      1480       |    number    |  false   |
 | `host_cidr`                   | CIDR IPv4 range to assign to EC2 nodes.                                                                                                                                                    |  "10.0.0.0/16"  |    string    |  false   |
 | `pod_cidr`                    | CIDR IPv4 range to assign Kubernetes pods.                                                                                                                                                 |  "10.2.0.0/16"  |    string    |  false   |
 | `service_cidr`                | CIDR IPv4 range to assign Kubernetes services.                                                                                                                                             |  "10.3.0.0/16"  |    string    |  false   |
